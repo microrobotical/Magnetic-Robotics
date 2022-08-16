@@ -79,7 +79,7 @@ magSerialRobot::~magSerialRobot()
 Eigen::Vector3d magSerialRobot::magnet(int linkNumber)
 {
     /* This function returns the dipole moment vector of the magnet in the
-     * link specified in the coordinates of the base link frame.
+     * link specified in global coordinates.
      *
      * Inputs:
      * int linkNumber - The specified link (link 0 is the base link)
@@ -90,7 +90,7 @@ Eigen::Vector3d magSerialRobot::magnet(int linkNumber)
      */
     // Dipole vector in homogeneous coordinates
     Eigen::Vector4d m;
-    Eigen::Matrix4d T = magSerialRobot::transformMat(linkNumber, 0);
+    Eigen::Matrix4d T = magSerialRobot::transformMatGlobal(linkNumber);
     // Augmenting the local dipole vector with 0 (converting to homogeneous
     // coordinates).
     m << magSerialRobot::magnetLocal[linkNumber], 0; // A.m^2
@@ -104,7 +104,7 @@ Eigen::Vector3d magSerialRobot::magnet(int linkNumber)
 Eigen::Vector3d magSerialRobot::magnetPos(int linkNumber)
 {
     /* This function returns the position vector of the magnet in the
-     * link specified in the coordinates of the base link frame.
+     * link specified in global coordinates.
      *
      * Inputs:
      * int linkNumber - The specified link (link 0 is the base link)
@@ -115,7 +115,7 @@ Eigen::Vector3d magSerialRobot::magnetPos(int linkNumber)
      */
     // Dipole vector in homogeneous coordinates
     Eigen::Vector4d r;
-    Eigen::Matrix4d T = magSerialRobot::transformMat(linkNumber, 0);
+    Eigen::Matrix4d T = magSerialRobot::transformMatGlobal(linkNumber);
     // Augmenting the local dipole position with 1 (converting to
     // homogeneous coordinates).
     r << magSerialRobot::magnetPosLocal[linkNumber], 1; // m
@@ -141,7 +141,7 @@ Eigen::Matrix<double,1,8> magSerialRobot::actuationVec(int jointNumber)
      */
     Eigen::Matrix<double,1,8> Mv = Eigen::Matrix<double,1,8>::Zero();
     Eigen::Matrix<double,6,1> unitTwist;
-    unitTwist = magSerialRobot::unitTwist(jointNumber);
+    unitTwist = magSerialRobot::unitTwistGlobal(jointNumber);
     unitTwist = robF::changeScrewOrder(unitTwist);
     for (int i=numLinks; i>=jointNumber; i--)
     {
@@ -154,7 +154,9 @@ Eigen::Matrix<double, Eigen::Dynamic, 8> magSerialRobot::actuationMatrix()
 {
     /* This function returns the actuation matrix Ma that relates the
      * applied augmented magnetic field vector beta = [b;g] (8x1) to the
-     * generalized forces Q at the joints of the robot. Q = Ma * beta
+     * generalized forces Q at the joints of the robot
+     *      Q = Ma * beta
+     * with beta specified in global coordinates.
      *
      * Inputs:
      * None
@@ -213,7 +215,7 @@ Eigen::Matrix<double, Eigen::Dynamic, 8> magSerialRobot::actuationMatrix()
     {
         // Determine the unit twist of the preceding joint. Joint i
         // is proximal to Link i.
-        unitTwist = magSerialRobot::unitTwist(i);
+        unitTwist = magSerialRobot::unitTwistGlobal(i);
         // Change to coordinate-ray order from ray-coordinate order.
         unitTwist = robF::changeScrewOrder(unitTwist);
         // Calculate the magnetic wrench matrix. The wrench on Joint i
