@@ -16,6 +16,7 @@ public:
     SerialRobot(int numLinks, double linkLength[], double linkTwist[], double linkOffset[], double jointAngle[], int jointType[]);
     SerialRobot(int numLinks);
     ~SerialRobot();
+    void m_change_DH_params(double linkLength[], double linkTwist[], double linkOffset[], double jointAngle[], int jointType[]);
     Eigen::Matrix4d m_calc_transform_mat_single_link(int fromFrame);
     Eigen::Matrix4d m_calc_transform_mat(int fromFrame, int toFrame);
     Eigen::Matrix4d m_calc_transform_mat(int fromFrame);

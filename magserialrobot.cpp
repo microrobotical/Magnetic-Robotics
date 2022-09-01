@@ -258,7 +258,7 @@ Eigen::Matrix<double, Eigen::Dynamic, 8> MagSerialRobot::m_get_actuation_matrix(
     return Ma;
 }
 
-void MagSerialRobot::m_set_magnets(Eigen::Vector3d magnetLocal[],
+void MagSerialRobot::m_change_magnets(Eigen::Vector3d magnetLocal[],
                                 Eigen::Vector3d magnetPosLocal[])
 {
     /*

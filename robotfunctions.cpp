@@ -116,6 +116,48 @@ robF::SerialRobot::~SerialRobot()
     delete[] mJointType;
 }
 
+void robF::SerialRobot::m_change_DH_params(double linkLength[], double linkTwist[], double linkOffset[], double jointAngle[], int jointType[])
+{
+    /*
+     * This function changes the DH parameters of the robot.
+     *
+     * Inputs:
+     * double linkLength[] - An array containing the link lengths of the
+     *                       robot (often symbolized by "a") in units of
+     *                       length.
+     * double linkTwist[]  - An array containing the link twists of the
+     *                       robot (often symbolized by "alpha") in
+     *                       radians.
+     * double linkOffset[] - An array containing the link offsets of the
+     *                       robot (often symbolized by "d") in units of
+     *                       length.
+     * double jointAngle[] - An array containing the joint angles of the
+     *                       robot (often symbolized by "theta") in
+     *                       radians.
+     * int jointType[]     - An array specifying the joint types of the
+     *                       robot (0 for revolute, 1 for prismatic).
+     *
+     * Outputs:
+     * None.
+     *
+     * Details:
+     * This method allows the DH parameters of the robot to be changed. It
+     * is useful if you want to instantiate the robot with only the number
+     * of links by calling SerialRobot(int n) and then set the DH parameters
+     * later. Note that the number of links is fixed, so the arrays passed to
+     * this function must have a consistent size with the number of links in
+     * the robot.
+     */
+    for (int i = 0; i<mNumLinks; i++)
+    {
+        mLinkLength[i] = linkLength[i];
+        mLinkTwist[i] = linkTwist[i];
+        mLinkOffset[i] = linkOffset[i];
+        mJointAngle[i] = jointAngle[i];
+        mJointType[i] = jointType[i];
+    }
+}
+
 Eigen::VectorXd robF::SerialRobot::m_get_q()
 {
     /* This function returns the present configuration (generalized

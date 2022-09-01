@@ -16,7 +16,7 @@ public:
     Eigen::Vector3d m_get_magnet(int linkNumber);
     Eigen::Vector3d m_get_magnet_pos(int linkNumber);
     Eigen::Matrix<double, Eigen::Dynamic, 8> m_get_actuation_matrix();
-    void m_set_magnets(Eigen::Vector3d magnetLocal[],
+    void m_change_magnets(Eigen::Vector3d magnetLocal[],
                        Eigen::Vector3d magnetPosLocal[]);
 private:
     Eigen::Vector3d *mMagnetLocal;
