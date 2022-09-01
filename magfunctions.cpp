@@ -148,6 +148,101 @@ Eigen::Matrix<double,6,8> magF::calc_dipole_wrench_matrix(Eigen::Vector3d dipole
     return Mw;
 }
 
+Eigen::Vector3d magF::calc_force_between_dipoles(Eigen::Vector3d m1Vec,
+                                           Eigen::Vector3d m2Vec,
+                                           Eigen::Vector3d r12Vec)
+{
+    /*
+     * Returns the force on dipole 2 due to dipole 1.
+     *
+     * Inputs:
+     * Eigen::Vector3d m1Vec  - 3x1 point dipole vector 1 in A.m^2
+     * Eigen::Vector3d m2Vec  - 3x1 point dipole vector 2 in A.m^2
+     * Eigen::Vector3d r12Vec - 3x1 position of dipole 2 relative to dipole 1
+     *                          (i.e. P2 - P1) in m
+     *
+     * Outputs:
+     * Eigen::Vector3d force  - 3x1 force vector on point dipole 2 in N
+     *
+     * Details:
+     * See p. 68 Abbott et al., "Magnetic Methods in Robotics," Ann. Rev.
+     * Ctrl. Robot. Auton. Syst., vol. 3, pp. 57-90, 2020.
+     */
+    Eigen::Vector3d force;
+    // Distance from point dipole 1 to point dipole 2
+    double r12 = r12Vec.norm(); //m
+    // Unit vector from point dipole 1 to point dipole 2
+    Eigen::Vector3d rHat = r12Vec / r12;
+    force = 3 * magF::mu0 / (4*M_PI*pow(r12,4.0))
+            * (
+                rHat.dot(m2Vec)*m1Vec
+                + rHat.dot(m1Vec)*m2Vec
+                + (
+                    m1Vec.dot(m2Vec) - 5.0*(rHat.dot(m1Vec)*rHat.dot(m2Vec))
+                   )*rHat
+               );
+    return force;
+}
+
+Eigen::Vector3d magF::calc_torque_between_dipoles(Eigen::Vector3d m1Vec,
+                                            Eigen::Vector3d m2Vec,
+                                            Eigen::Vector3d r12Vec)
+{
+    /*
+     * Returns the torque on dipole 2 due to dipole 1.
+     *
+     * Inputs:
+     * Eigen::Vector3d m1Vec  - 3x1 point dipole vector 1 in A.m^2
+     * Eigen::Vector3d m2Vec  - 3x1 point dipole vector 2 in A.m^2
+     * Eigen::Vector3d r12Vec - 3x1 position of dipole 2 relative to dipole 1
+     *                          (i.e. P2 - P1) in m
+     *
+     * Outputs:
+     * Eigen::Vector3d torque  - 3x1 force vector on point dipole 2 in N
+     *
+     * Details:
+     * See p. 69 Abbott et al., "Magnetic Methods in Robotics," Ann. Rev.
+     * Ctrl. Robot. Auton. Syst., vol. 3, pp. 57-90, 2020.
+     */
+    Eigen::Vector3d torque; //N.m
+    Eigen::Vector3d b1; //T
+    b1 = calc_dipole_field(m1Vec, r12Vec); //T
+    torque = m2Vec.cross(b1); //N.m
+    return torque;
+}
+
+Eigen::VectorXd magF::calc_wrench_between_dipoles(Eigen::Vector3d m1Vec,
+                                            Eigen::Vector3d m2Vec,
+                                            Eigen::Vector3d r1Pos,
+                                            Eigen::Vector3d r2Pos)
+{
+    /*
+     * Returns the wrench on dipole 2 due to dipole 1.
+     *
+     * Inputs:
+     * Eigen::Vector3d m1Vec   - 3x1 point dipole vector 1 in A.m^2
+     * Eigen::Vector3d m2Vec   - 3x1 point dipole vector 2 in A.m^2
+     * Eigen::Vector3d r1Pos   - 3x1 position of dipole 1 in m
+     * Eigen::Vector3d r2Pos   - 3x1 position of dipole 2 in m
+     *
+     * Outputs:
+     * Eigen::VectorXd wrench  - 6x1 force vector on point dipole 2 in ray-
+     *                           coordinate order (f;tO) in N and N.m
+     *
+     * Details:
+     * See p. 69 Abbott et al., "Magnetic Methods in Robotics," Ann. Rev.
+     * Ctrl. Robot. Auton. Syst., vol. 3, pp. 57-90, 2020.
+     */
+    Eigen::VectorXd wrench(6); //(N; N.m)
+    Eigen::Vector3d r12Vec = r2Pos - r1Pos; //m
+    Eigen::Vector3d force12 = calc_force_between_dipoles(m1Vec, m2Vec,
+                                                         r12Vec); //N
+    Eigen::Vector3d torque12 = calc_torque_between_dipoles(m1Vec, m2Vec,
+                                                           r12Vec); //N.m
+    wrench << force12, torque12 + r2Pos.cross(force12); //(N; N.m)
+    return wrench;
+}
+
 Eigen::Matrix3d magF::calc_xprod_skew_mat(Eigen::Vector3d v)
 {
     /*
