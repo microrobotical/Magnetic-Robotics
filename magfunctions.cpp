@@ -1,6 +1,6 @@
 #include "magfunctions.h"
 
-Eigen::Vector3d magF::dipoleField(Eigen::Vector3d dipoleMoment, Eigen::Vector3d relPosition)
+Eigen::Vector3d magF::calc_dipole_field(Eigen::Vector3d dipoleMoment, Eigen::Vector3d relPosition)
 {
     /* This function returns the magnetic field vector at a point in space
      * defined by a relative position vector and the dipole moment
@@ -23,7 +23,32 @@ Eigen::Vector3d magF::dipoleField(Eigen::Vector3d dipoleMoment, Eigen::Vector3d 
     return field;
 }
 
-Eigen::Matrix3d magF::dipoleTorqueMatrix(Eigen::Vector3d dipoleMoment)
+Eigen::Matrix<double,6,1> magF::calc_wrench_on_dipole(Eigen::Vector3d dipoleMoment, Eigen::Vector3d position, Eigen::Matrix<double,8,1> augField)
+{
+    /* This function returns the wrench on a magnetic dipole caused by the
+     * surrounding magnetic field and gradient at the dipole position.
+     *
+     * Inputs:
+     * Eigen::Vector3d dipoleMoment       - 3x1 point dipole moment vector in
+     *                                      A.m^2
+     * Eigen::Vector3d position           - 3x1 position vector in m
+     * Eigen::Matrix<double,8,1> augField - 8x1 augmented field vector [b;g]
+     *                                      in T and T/m
+     *
+     * Outputs:
+     * Eigen::Matrix<double,6,1> wrench   - 6x1 wrench in ray-coord order
+     *                                      (f;tO) in N and N.m
+     *
+     * Details:
+     * See p. 60 Abbott et al., "Magnetic Methods in Robotics," Ann. Rev.
+     * Ctrl. Robot. Auton. Syst., vol. 3, pp. 57-90, 2020.
+     */
+    Eigen::Matrix<double,6,1> wrench;
+    wrench = calc_dipole_wrench_matrix(dipoleMoment, position) * augField;
+    return wrench;
+}
+
+Eigen::Matrix3d magF::calc_dipole_torque_matrix(Eigen::Vector3d dipoleMoment)
 {
     /*
      * This function returns the matrix Mt that defines the torque
@@ -40,11 +65,11 @@ Eigen::Matrix3d magF::dipoleTorqueMatrix(Eigen::Vector3d dipoleMoment)
      * Ctrl. Robot. Auton. Syst., vol. 3, pp. 57-90, 2020.
      */
     Eigen::Matrix3d Mt;
-    Mt = magF::skewMat(dipoleMoment);
+    Mt = calc_xprod_skew_mat(dipoleMoment);
     return Mt;
 }
 
-Eigen::Matrix<double,3,5> magF::dipoleForceMatrix(Eigen::Vector3d dipoleMoment)
+Eigen::Matrix<double,3,5> magF::calc_dipole_force_matrix(Eigen::Vector3d dipoleMoment)
 {
     /* This function returns the matrix Mf that defines the force
      * experienced by a dipole moment in a magnetic gradient.
@@ -79,7 +104,7 @@ Eigen::Matrix<double,3,5> magF::dipoleForceMatrix(Eigen::Vector3d dipoleMoment)
     return Mf;
 }
 
-Eigen::Matrix<double,6,8> magF::dipoleWrenchMatrix(Eigen::Vector3d dipoleMoment, Eigen::Vector3d position)
+Eigen::Matrix<double,6,8> magF::calc_dipole_wrench_matrix(Eigen::Vector3d dipoleMoment, Eigen::Vector3d position)
 {
     /* This function returns the matrix Mw that defines the wrench
      * experienced by a dipole moment in a magnetic field and gradient.
@@ -116,14 +141,14 @@ Eigen::Matrix<double,6,8> magF::dipoleWrenchMatrix(Eigen::Vector3d dipoleMoment,
      *      $ = Mw * beta
      */
     Eigen::Matrix<double,6,8> Mw;
-    Eigen::Matrix3d Mt = magF::dipoleTorqueMatrix(dipoleMoment);
-    Eigen::Matrix<double,3,5> Mf = magF::dipoleForceMatrix(dipoleMoment);
+    Eigen::Matrix3d Mt = calc_dipole_torque_matrix(dipoleMoment);
+    Eigen::Matrix<double,3,5> Mf = calc_dipole_force_matrix(dipoleMoment);
     Mw << Eigen::Matrix3d::Zero(),                         Mf,
-                               Mt, magF::skewMat(position)*Mf;
+                               Mt, calc_xprod_skew_mat(position)*Mf;
     return Mw;
 }
 
-Eigen::Matrix3d magF::skewMat(Eigen::Vector3d v)
+Eigen::Matrix3d magF::calc_xprod_skew_mat(Eigen::Vector3d v)
 {
     /*
      * This function returns the skew-symmetric matrix of a vector v that
@@ -154,3 +179,5 @@ Eigen::Matrix3d magF::skewMat(Eigen::Vector3d v)
          -v(1),  v(0),     0;
     return M;
 }
+
+

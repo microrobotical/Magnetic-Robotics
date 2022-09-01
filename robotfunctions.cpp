@@ -1,7 +1,7 @@
 #include "robotfunctions.h"
 #include <iostream>
 
-Eigen::Matrix<double,6,1> robF::changeScrewOrder(Eigen::Matrix<double,6,1> screw)
+Eigen::Matrix<double,6,1> robF::change_screw_order(Eigen::Matrix<double,6,1> screw)
 {
     Eigen::Matrix<double,6,6> screwIntchngMat{
         {0,0,0,1,0,0},
@@ -14,9 +14,9 @@ Eigen::Matrix<double,6,1> robF::changeScrewOrder(Eigen::Matrix<double,6,1> screw
     return screwIntchngMat * screw;
 }
 
-robF::serialRobot::serialRobot(int numLinks, double linkLength[], double linkTwist[], double linkOffset[], double jointAngle[], int jointType[])
+robF::SerialRobot::SerialRobot(int numLinks, double linkLength[], double linkTwist[], double linkOffset[], double jointAngle[], int jointType[])
 {
-    /* Detailed constructor for the serialRobot class.
+    /* Detailed constructor for the SerialRobot class.
      *
      * Inputs:
      * int numLinks        - The number of links in the robot.
@@ -41,7 +41,7 @@ robF::serialRobot::serialRobot(int numLinks, double linkLength[], double linkTwi
      * Details:
      * This constructor takes the number of links and several arrays
      * containing the Denavit-Hartenberg (DH) parameters of the robot.
-     * The DH parameters are stored as array members of the serialRobot
+     * The DH parameters are stored as array members of the SerialRobot
      * object.
      * The Denavit-Hartenberg convention used here assumes that the ith
      * frame is rigidly attached to the ith link, with the z-axis collinear
@@ -49,25 +49,25 @@ robF::serialRobot::serialRobot(int numLinks, double linkLength[], double linkTwi
      * translation axis (for a prismatic joint) of the joint connecting
      * links i and i+1.
      */
-    serialRobot::numLinks = numLinks;
-    serialRobot::linkLength = new double[numLinks];
-    serialRobot::linkTwist = new double[numLinks];
-    serialRobot::linkOffset = new double[numLinks];
-    serialRobot::jointAngle = new double[numLinks];
-    serialRobot::jointType = new int[numLinks];
+    mNumLinks = numLinks;
+    mLinkLength = new double[numLinks];
+    mLinkTwist = new double[numLinks];
+    mLinkOffset = new double[numLinks];
+    mJointAngle = new double[numLinks];
+    mJointType = new int[numLinks];
     for (int i = 0; i<numLinks; i++)
     {
-        serialRobot::linkLength[i] = linkLength[i];
-        serialRobot::linkTwist[i] = linkTwist[i];
-        serialRobot::linkOffset[i] = linkOffset[i];
-        serialRobot::jointAngle[i] = jointAngle[i];
-        serialRobot::jointType[i] = jointType[i];
+        mLinkLength[i] = linkLength[i];
+        mLinkTwist[i] = linkTwist[i];
+        mLinkOffset[i] = linkOffset[i];
+        mJointAngle[i] = jointAngle[i];
+        mJointType[i] = jointType[i];
     }
 }
 
-robF::serialRobot::serialRobot(int numLinks)
+robF::SerialRobot::SerialRobot(int numLinks)
 {
-    /* Simplified constructor for the serialRobot class.
+    /* Simplified constructor for the SerialRobot class.
      *
      * Inputs:
      * int numLinks - The number of links in the robot.
@@ -79,25 +79,25 @@ robF::serialRobot::serialRobot(int numLinks)
      * This constructor takes the number of links and initializes all DH
      * parameters to zero.
      */
-    serialRobot::numLinks = numLinks;
-    serialRobot::linkLength = new double[numLinks];
-    serialRobot::linkTwist = new double[numLinks];
-    serialRobot::linkOffset = new double[numLinks];
-    serialRobot::jointAngle = new double[numLinks];
-    serialRobot::jointType = new int[numLinks];
+    mNumLinks = numLinks;
+    mLinkLength = new double[numLinks];
+    mLinkTwist = new double[numLinks];
+    mLinkOffset = new double[numLinks];
+    mJointAngle = new double[numLinks];
+    mJointType = new int[numLinks];
     for (int i = 0; i<numLinks; i++)
     {
-        serialRobot::linkLength[i] = 0.0;
-        serialRobot::linkTwist[i] = 0.0;
-        serialRobot::linkOffset[i] = 0.0;
-        serialRobot::jointAngle[i] = 0.0;
-        serialRobot::jointType[i] = 0;
+        mLinkLength[i] = 0.0;
+        mLinkTwist[i] = 0.0;
+        mLinkOffset[i] = 0.0;
+        mJointAngle[i] = 0.0;
+        mJointType[i] = 0;
     }
 }
 
-robF::serialRobot::~serialRobot()
+robF::SerialRobot::~SerialRobot()
 {
-    /* Destructor for the serialRobot class.
+    /* Destructor for the SerialRobot class.
      *
      * Inputs:
      * None
@@ -109,14 +109,14 @@ robF::serialRobot::~serialRobot()
      * Performs some cleanup tasks, such as deleting the dynamic arrays
      * that store the DH parameters for the robot links.
      */
-    delete[] serialRobot::linkLength;
-    delete[] serialRobot::linkTwist;
-    delete[] serialRobot::linkOffset;
-    delete[] serialRobot::jointAngle;
-    delete[] serialRobot::jointType;
+    delete[] mLinkLength;
+    delete[] mLinkTwist;
+    delete[] mLinkOffset;
+    delete[] mJointAngle;
+    delete[] mJointType;
 }
 
-Eigen::VectorXd robF::serialRobot::getq()
+Eigen::VectorXd robF::SerialRobot::m_get_q()
 {
     /* This function returns the present configuration (generalized
      * coordinates) of the robot.
@@ -133,25 +133,25 @@ Eigen::VectorXd robF::serialRobot::getq()
      * the generalized coordinates are the joint angles (radians) and link
      * offsets (meters) for revolute and prismatic joints, respectively.
      */
-    Eigen::VectorXd q(serialRobot::numLinks);
-    for(int i = 0; i < serialRobot::numLinks; i++)
+    Eigen::VectorXd q(mNumLinks);
+    for(int i = 0; i < mNumLinks; i++)
     {
-        switch (serialRobot::jointType[i])
+        switch (mJointType[i])
         {
         case JOINTREV:
             // Revolute joint
-            q(i) = serialRobot::jointAngle[i];
+            q(i) = mJointAngle[i];
             break;
         case JOINTPRS:
             // Prismatic joint
-            q(i) = serialRobot::linkOffset[i];
+            q(i) = mLinkOffset[i];
             break;
         }
     }
     return q;
 }
 
-void robF::serialRobot::setq(Eigen::VectorXd q)
+void robF::SerialRobot::m_set_q(Eigen::VectorXd q)
 {
     /* This function changes the configuration (generalized coordinates)
      * of the robot.
@@ -168,23 +168,23 @@ void robF::serialRobot::setq(Eigen::VectorXd q)
      * the generalized coordinates are the joint angles (radians) and link
      * offsets (meters) for revolute and prismatic joints, respectively.
      */
-    for(int i = 0; i < serialRobot::numLinks; i++)
+    for(int i = 0; i < mNumLinks; i++)
     {
-        switch (serialRobot::jointType[i])
+        switch (mJointType[i])
         {
         case JOINTREV:
             // Revolute joint
-            serialRobot::jointAngle[i] = q(i);
+            mJointAngle[i] = q(i);
             break;
         case JOINTPRS:
             // Prismatic joint
-            serialRobot::linkOffset[i] = q(i);
+            mLinkOffset[i] = q(i);
             break;
         }
     }
 }
 
-void robF::serialRobot::setq(int jointNumber, double q)
+void robF::SerialRobot::m_set_q(int jointNumber, double q)
 {
     /* This method changes the value of the generalized coordinate of the
      * specified joint.
@@ -204,20 +204,20 @@ void robF::serialRobot::setq(int jointNumber, double q)
      * which is connected to Link 1 by Joint 1. Link 1 then connects to
      * Link 2 by Joint 2.
      */
-    switch (serialRobot::jointType[jointNumber-1])
+    switch (mJointType[jointNumber-1])
     {
     case JOINTREV:
         // Revolute joint
-        serialRobot::jointAngle[jointNumber-1] = q;
+        mJointAngle[jointNumber-1] = q;
         break;
     case JOINTPRS:
         // Prismatic joint
-        serialRobot::linkOffset[jointNumber-1] = q;
+        mLinkOffset[jointNumber-1] = q;
         break;
     }
 }
 
-void robF::serialRobot::setTbase(Eigen::Matrix4d T)
+void robF::SerialRobot::m_set_Tbase(Eigen::Matrix4d T)
 {
     /* This function modifies the Tbase member of the serial robot (the
      * affine transformation matrix from the base frame to the global
@@ -230,10 +230,10 @@ void robF::serialRobot::setTbase(Eigen::Matrix4d T)
      * Outputs:
      * None
      */
-    serialRobot::Tbase = T;
+    mTBase = T;
 }
 
-Eigen::Matrix4d robF::serialRobot::transformMatSingleLink(int fromFrame)
+Eigen::Matrix4d robF::SerialRobot::m_calc_transform_mat_single_link(int fromFrame)
 {
     /* This function calculates the 4x4 homogeneous transformation matrix
      * from frame i to frame i-1.
@@ -269,10 +269,10 @@ Eigen::Matrix4d robF::serialRobot::transformMatSingleLink(int fromFrame)
      *      T_i^{i-1} = A_i
      */
     Eigen::Matrix4d T;
-    double theta = serialRobot::jointAngle[fromFrame]; //rad
-    double alpha = serialRobot::linkTwist[fromFrame]; //rad
-    double a = serialRobot::linkLength[fromFrame]; //meter
-    double d = serialRobot::linkOffset[fromFrame]; //meter
+    double theta = mJointAngle[fromFrame]; //rad
+    double alpha = mLinkTwist[fromFrame]; //rad
+    double a = mLinkLength[fromFrame]; //meter
+    double d = mLinkOffset[fromFrame]; //meter
     T << cos(theta), -sin(theta)*cos(alpha),  sin(theta)*sin(alpha), a*cos(theta),
          sin(theta),  cos(theta)*cos(alpha), -cos(theta)*sin(alpha), a*sin(theta),
                 0.0,             sin(alpha),             cos(alpha),            d,
@@ -280,7 +280,7 @@ Eigen::Matrix4d robF::serialRobot::transformMatSingleLink(int fromFrame)
     return T;
 }
 
-Eigen::Matrix4d robF::serialRobot::transformMat(int fromFrame, int toFrame)
+Eigen::Matrix4d robF::SerialRobot::m_calc_transform_mat(int fromFrame, int toFrame)
 {
     /* This method returns the transformation matrix between two link
      * frames for the serial robot in its present state.
@@ -338,7 +338,7 @@ Eigen::Matrix4d robF::serialRobot::transformMat(int fromFrame, int toFrame)
     T = Eigen::Matrix4d::Identity();
     // Check whether both of the requested frames are within the range from
     // 0 to numLinks
-    if ((0 <= fromFrame) && (fromFrame <= serialRobot::numLinks) && (0 <= toFrame) && (toFrame <= serialRobot::numLinks))
+    if ((0 <= fromFrame) && (fromFrame <= mNumLinks) && (0 <= toFrame) && (toFrame <= mNumLinks))
     {
         // Check whether the starting frame is distal or proximal to the
         // ending frame.
@@ -347,7 +347,7 @@ Eigen::Matrix4d robF::serialRobot::transformMat(int fromFrame, int toFrame)
             // The starting frame is distal to the ending frame.
             for (int i = toFrame; i < fromFrame; i++)
             {
-                T *= serialRobot::transformMatSingleLink(i);
+                T *= m_calc_transform_mat_single_link(i);
             }
         }
         else if (fromFrame - toFrame < 0)
@@ -358,7 +358,7 @@ Eigen::Matrix4d robF::serialRobot::transformMat(int fromFrame, int toFrame)
             // frame).
             for (int i = fromFrame; i < toFrame; i++)
             {
-                T *= serialRobot::transformMatSingleLink(i);
+                T *= SerialRobot::m_calc_transform_mat_single_link(i);
             }
             // Extract the rotation matrix and translation vector (for
             // readability purposes).
@@ -376,7 +376,7 @@ Eigen::Matrix4d robF::serialRobot::transformMat(int fromFrame, int toFrame)
     return T;
 }
 
-Eigen::Matrix4d robF::serialRobot::transformMat(int fromFrame)
+Eigen::Matrix4d robF::SerialRobot::m_calc_transform_mat(int fromFrame)
 {
     /* This method returns the transformation matrix from the specified
      * frame to the base frame of the serial robot.
@@ -392,11 +392,11 @@ Eigen::Matrix4d robF::serialRobot::transformMat(int fromFrame)
      */
     // The 4x4 homogeneous transformation matrix
     Eigen::Matrix4d T;
-    T = serialRobot::transformMat(fromFrame, 0);
+    T = m_calc_transform_mat(fromFrame, 0);
     return T;
 }
 
-Eigen::Matrix4d robF::serialRobot::transformMat()
+Eigen::Matrix4d robF::SerialRobot::m_calc_transform_mat()
 {
     /* This method returns the transformation matrix from the end-effector
      * frame to the base frame of the serial robot.
@@ -410,11 +410,11 @@ Eigen::Matrix4d robF::serialRobot::transformMat()
      *                       vectors) in mixed units.
      */
     Eigen::Matrix4d T;
-    T = serialRobot::transformMat(serialRobot::numLinks);
+    T = m_calc_transform_mat(mNumLinks);
     return T;
 }
 
-Eigen::Matrix4d robF::serialRobot::transformMatGlobal(int fromFrame)
+Eigen::Matrix4d robF::SerialRobot::m_calc_transform_mat_global(int fromFrame)
 {
     /* This method returns the transformation matrix from the specified
      * frame of the serial robot to the global frame.
@@ -429,11 +429,11 @@ Eigen::Matrix4d robF::serialRobot::transformMatGlobal(int fromFrame)
      *                       vectors) in mixed units.
      */
     Eigen::Matrix4d T;
-    T = serialRobot::Tbase * serialRobot::transformMat(fromFrame);
+    T = mTBase * m_calc_transform_mat(fromFrame);
     return T;
 }
 
-Eigen::Matrix<double,6,1> robF::serialRobot::unitTwist(int jointNumber)
+Eigen::Matrix<double,6,1> robF::SerialRobot::m_calc_unit_twist(int jointNumber)
 {
     /* This method calculates the twist of unit amplitude in base
      * coordinates corresponding to the joint specified by jointNumber in
@@ -483,13 +483,13 @@ Eigen::Matrix<double,6,1> robF::serialRobot::unitTwist(int jointNumber)
     // The transformation matrix from the frame corresponding to the joint
     // specified by jointNumber. If i = jointNumber, then the i-1 frame
     // has a z-axis that is collinear with the motion axis of joint i.
-    Eigen::Matrix4d TMat = serialRobot::transformMat(frameNumber);
+    Eigen::Matrix4d TMat = m_calc_transform_mat(frameNumber);
     // Initialize the velocity and position of the joint with zeros.
     Eigen::Vector3d angularVelocity = Eigen::Vector3d::Zero();
     Eigen::Vector3d linearVelocity = Eigen::Vector3d::Zero();
     Eigen::Vector3d position = Eigen::Vector3d::Zero();
     // Check the joint type
-    switch (serialRobot::jointType[frameNumber])
+    switch (mJointType[frameNumber])
     {
         case JOINTREV:
             // The joint is revolute
@@ -507,7 +507,7 @@ Eigen::Matrix<double,6,1> robF::serialRobot::unitTwist(int jointNumber)
     return jointTwist;
 }
 
-Eigen::Matrix<double,6,1> robF::serialRobot::unitTwistGlobal(int jointNumber)
+Eigen::Matrix<double,6,1> robF::SerialRobot::m_calc_unit_twist_global(int jointNumber)
 {
     /* This method calculates the twist of unit amplitude in global
      * coordinates corresponding to the joint specified by jointNumber in
@@ -557,13 +557,13 @@ Eigen::Matrix<double,6,1> robF::serialRobot::unitTwistGlobal(int jointNumber)
     // The transformation matrix from the frame corresponding to the joint
     // specified by jointNumber. If i = jointNumber, then the i-1 frame
     // has a z-axis that is collinear with the motion axis of joint i.
-    Eigen::Matrix4d TMat = serialRobot::transformMatGlobal(frameNumber);
+    Eigen::Matrix4d TMat = m_calc_transform_mat_global(frameNumber);
     // Initialize the velocity and position of the joint with zeros.
     Eigen::Vector3d angularVelocity = Eigen::Vector3d::Zero();
     Eigen::Vector3d linearVelocity = Eigen::Vector3d::Zero();
     Eigen::Vector3d position = Eigen::Vector3d::Zero();
     // Check the joint type
-    switch (serialRobot::jointType[frameNumber])
+    switch (mJointType[frameNumber])
     {
         case JOINTREV:
             // The joint is revolute
@@ -581,15 +581,15 @@ Eigen::Matrix<double,6,1> robF::serialRobot::unitTwistGlobal(int jointNumber)
     return jointTwist;
 }
 
-double robF::serialRobot::applyWrenchToJoint(int jointNumber, Eigen::Matrix<double,6,1> wrench)
+double robF::SerialRobot::m_calc_gen_force_from_wrench(int jointNumber, Eigen::Matrix<double,6,1> wrench)
 {
     /* This function calculates the generalized force about the specified
      * joint of the robot due to a distally-applied wrench.
      *
      * Inputs:
-     * int jointNumber           - The number of the joint according to
-     *                             the DH convention.
-     * Eigen::Matrix<double,6,1> - The applied wrench.
+     * int jointNumber                   - The number of the joint according to
+     *                                     the DH convention.
+     * Eigen::Matrix<double,6,1> wrench  - The applied wrench in global coords.
      *
      * Outputs:
      * double Q                  - The generalized force about the joint.
@@ -614,8 +614,8 @@ double robF::serialRobot::applyWrenchToJoint(int jointNumber, Eigen::Matrix<doub
      * 2004.
      */
     double Q = 0.0;
-    Eigen::Matrix<double,6,1> twist = serialRobot::unitTwist(jointNumber);
-    Q = twist.transpose() * robF::changeScrewOrder(wrench);
+    Eigen::Matrix<double,6,1> twist = m_calc_unit_twist_global(jointNumber);
+    Q = twist.transpose() * robF::change_screw_order(wrench);
     return Q;
 }
 

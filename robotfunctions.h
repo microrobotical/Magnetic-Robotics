@@ -3,39 +3,39 @@
 
 #include <Eigen/Eigen>
 
-#define JOINTREV 0
-#define JOINTPRS 1
-
 namespace robF
 {
-Eigen::Matrix<double,6,1> changeScrewOrder(Eigen::Matrix<double,6,1> screw);
+#define JOINTREV 0
+#define JOINTPRS 1
+Eigen::Matrix<double,6,1> change_screw_order(Eigen::Matrix<double,6,1> screw);
 
-class serialRobot
+class SerialRobot
 {
 public:
-    serialRobot(int numLinks, double linkLength[], double linkTwist[], double linkOffset[], double jointAngle[], int jointType[]);
-    serialRobot(int numLinks);
-    ~serialRobot();
-    Eigen::Matrix4d transformMatSingleLink(int fromFrame);
-    Eigen::Matrix4d transformMat(int fromFrame, int toFrame);
-    Eigen::Matrix4d transformMat(int fromFrame);
-    Eigen::Matrix4d transformMat();
-    Eigen::Matrix4d transformMatGlobal(int fromFrame);
-    Eigen::Matrix<double,6,1> unitTwist(int jointNumber);
-    Eigen::Matrix<double,6,1> unitTwistGlobal(int jointNumber);
-    double applyWrenchToJoint(int jointNumber, Eigen::Matrix<double,6,1> wrench);
-    void setq(Eigen::VectorXd q);
-    void setq(int jointNumber, double q);
-    void setTbase(Eigen::Matrix4d T);
-    Eigen::VectorXd getq(void);
+    SerialRobot();
+    SerialRobot(int numLinks, double linkLength[], double linkTwist[], double linkOffset[], double jointAngle[], int jointType[]);
+    SerialRobot(int numLinks);
+    ~SerialRobot();
+    Eigen::Matrix4d m_calc_transform_mat_single_link(int fromFrame);
+    Eigen::Matrix4d m_calc_transform_mat(int fromFrame, int toFrame);
+    Eigen::Matrix4d m_calc_transform_mat(int fromFrame);
+    Eigen::Matrix4d m_calc_transform_mat();
+    Eigen::Matrix4d m_calc_transform_mat_global(int fromFrame);
+    Eigen::Matrix<double,6,1> m_calc_unit_twist(int jointNumber);
+    Eigen::Matrix<double,6,1> m_calc_unit_twist_global(int jointNumber);
+    double m_calc_gen_force_from_wrench(int jointNumber, Eigen::Matrix<double,6,1> wrench);
+    void m_set_q(Eigen::VectorXd q);
+    void m_set_q(int jointNumber, double q);
+    void m_set_Tbase(Eigen::Matrix4d T);
+    Eigen::VectorXd m_get_q(void);
 protected:
-    int numLinks;
-    double* linkLength;
-    double* linkTwist;
-    double* linkOffset;
-    double* jointAngle;
-    int* jointType;
-    Eigen::Matrix4d Tbase = Eigen::Matrix4d::Identity();
+    int mNumLinks;
+    double* mLinkLength;
+    double* mLinkTwist;
+    double* mLinkOffset;
+    double* mJointAngle;
+    int* mJointType;
+    Eigen::Matrix4d mTBase = Eigen::Matrix4d::Identity();
 };
 }
 #endif // ROBOTFUNCTIONS_H

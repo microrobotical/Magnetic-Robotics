@@ -1,7 +1,38 @@
 #include "magserialrobot.h"
-#include <iostream>
 
-magSerialRobot::magSerialRobot(int numLinks, double linkLength[], double linkTwist[], double linkOffset[], double jointAngle[], int jointType[], Eigen::Vector3d magnetLocal[], Eigen::Vector3d magnetPosLocal[]) : robF::serialRobot(numLinks, linkLength, linkTwist, linkOffset, jointAngle, jointType)
+magSerialRobot::magSerialRobot(int numLinks) : robF::SerialRobot(numLinks)
+{
+    /* Simplified constructor for the magSerialRobot class.
+     *
+     * Inputs:
+     * int numLinks - The number of links in the robot.
+     *
+     * Outputs:
+     * N/A. This is a class constructor.
+     *
+     * Details:
+     * When instantiating an object of the magSerialRobot class, the minimum
+     * required information is the number of links in the robot. The number
+     * of links is needed for sizing the dynamic arrays that describe the
+     * magnetic and geometrical properties of the robot.
+     *
+     */
+    mMagnetLocal = new Eigen::Vector3d[numLinks+1];
+    mMagnetPosLocal = new Eigen::Vector3d[numLinks+1];
+    for (int i = 0; i<numLinks+1; i++)
+    {
+        mMagnetLocal[i] << 0.0, 0.0, 0.0;
+        mMagnetPosLocal[i] << 0.0, 0.0, 0.0;
+    }
+}
+
+magSerialRobot::magSerialRobot(int numLinks, double linkLength[],
+                               double linkTwist[], double linkOffset[],
+                               double jointAngle[], int jointType[],
+                               Eigen::Vector3d magnetLocal[],
+                               Eigen::Vector3d magnetPosLocal[])
+    : robF::SerialRobot(numLinks, linkLength, linkTwist, linkOffset,
+                        jointAngle, jointType)
 {
     /* Detailed constructor for the magSerialRobot class.
      *
@@ -40,7 +71,7 @@ magSerialRobot::magSerialRobot(int numLinks, double linkLength[], double linkTwi
      * Details:
      * This constructor takes the number of links and several arrays
      * containing the Denavit-Hartenberg (DH) parameters of the robot.
-     * The DH parameters are stored as array members of the serialRobot
+     * The DH parameters are stored as array members of the SerialRobot
      * object.
      * The Denavit-Hartenberg convention used here assumes that the ith
      * frame is rigidly attached to the ith link, with the z-axis collinear
@@ -48,12 +79,12 @@ magSerialRobot::magSerialRobot(int numLinks, double linkLength[], double linkTwi
      * translation axis (for a prismatic joint) of the joint connecting
      * links i and i+1.
      */
-    magSerialRobot::magnetLocal = new Eigen::Vector3d[numLinks+1];
-    magSerialRobot::magnetPosLocal = new Eigen::Vector3d[numLinks+1];
+    mMagnetLocal = new Eigen::Vector3d[numLinks+1];
+    mMagnetPosLocal = new Eigen::Vector3d[numLinks+1];
     for (int i = 0; i<numLinks+1; i++)
     {
-        magSerialRobot::magnetLocal[i] = magnetLocal[i];
-        magSerialRobot::magnetPosLocal[i] = magnetPosLocal[i];
+        mMagnetLocal[i] = magnetLocal[i];
+        mMagnetPosLocal[i] = magnetPosLocal[i];
     }
 }
 
@@ -72,11 +103,11 @@ magSerialRobot::~magSerialRobot()
      * parent class, so we only need to clean up the dynamic arrays for
      * the magnet dipole vectors and positions.
      */
-    delete[] magSerialRobot::magnetLocal;
-    delete[] magSerialRobot::magnetPosLocal;
+    delete[] mMagnetLocal;
+    delete[] mMagnetPosLocal;
 }
 
-Eigen::Vector3d magSerialRobot::magnet(int linkNumber)
+Eigen::Vector3d magSerialRobot::m_get_magnet(int linkNumber)
 {
     /* This function returns the dipole moment vector of the magnet in the
      * link specified in global coordinates.
@@ -90,10 +121,10 @@ Eigen::Vector3d magSerialRobot::magnet(int linkNumber)
      */
     // Dipole vector in homogeneous coordinates
     Eigen::Vector4d m;
-    Eigen::Matrix4d T = magSerialRobot::transformMatGlobal(linkNumber);
+    Eigen::Matrix4d T = m_calc_transform_mat_global(linkNumber);
     // Augmenting the local dipole vector with 0 (converting to homogeneous
     // coordinates).
-    m << magSerialRobot::magnetLocal[linkNumber], 0; // A.m^2
+    m << mMagnetLocal[linkNumber], 0; // A.m^2
     // Applying the coordinate transform to the dipole vector in local
     // coordinates to get the dipole vector in base coordinates.
     m = T * m;
@@ -101,7 +132,7 @@ Eigen::Vector3d magSerialRobot::magnet(int linkNumber)
     return m(Eigen::seq(0,2));
 }
 
-Eigen::Vector3d magSerialRobot::magnetPos(int linkNumber)
+Eigen::Vector3d magSerialRobot::m_get_magnet_pos(int linkNumber)
 {
     /* This function returns the position vector of the magnet in the
      * link specified in global coordinates.
@@ -115,10 +146,10 @@ Eigen::Vector3d magSerialRobot::magnetPos(int linkNumber)
      */
     // Dipole vector in homogeneous coordinates
     Eigen::Vector4d r;
-    Eigen::Matrix4d T = magSerialRobot::transformMatGlobal(linkNumber);
+    Eigen::Matrix4d T = m_calc_transform_mat_global(linkNumber);
     // Augmenting the local dipole position with 1 (converting to
     // homogeneous coordinates).
-    r << magSerialRobot::magnetPosLocal[linkNumber], 1; // m
+    r << mMagnetPosLocal[linkNumber], 1; // m
     // Applying the coordinate transform to the dipole vector in local
     // coordinates to get the dipole vector in base coordinates.
     r = T*r;
@@ -126,7 +157,7 @@ Eigen::Vector3d magSerialRobot::magnetPos(int linkNumber)
     return r(Eigen::seq(0,2));
 }
 
-Eigen::Matrix<double,1,8> magSerialRobot::actuationVec(int jointNumber)
+Eigen::Matrix<double,1,8> magSerialRobot::m_actuation_vec(int jointNumber)
 {
     /* This function returns the row vector Mv that relates the applied
      * augmented magnetic field vector beta (8x1) to the generalized
@@ -141,16 +172,16 @@ Eigen::Matrix<double,1,8> magSerialRobot::actuationVec(int jointNumber)
      */
     Eigen::Matrix<double,1,8> Mv = Eigen::Matrix<double,1,8>::Zero();
     Eigen::Matrix<double,6,1> unitTwist;
-    unitTwist = magSerialRobot::unitTwistGlobal(jointNumber);
+    unitTwist = m_calc_unit_twist_global(jointNumber);
     unitTwist = robF::changeScrewOrder(unitTwist);
-    for (int i=numLinks; i>=jointNumber; i--)
+    for (int i=mNumLinks; i>=jointNumber; i--)
     {
-        Mv += unitTwist.transpose() * magF::dipoleWrenchMatrix(magSerialRobot::magnet(i), magSerialRobot::magnetPos(i));
+        Mv += unitTwist.transpose() * magF::dipoleWrenchMatrix(m_get_magnet(i), m_get_magnet_pos(i));
     }
     return Mv;
 }
 
-Eigen::Matrix<double, Eigen::Dynamic, 8> magSerialRobot::actuationMatrix()
+Eigen::Matrix<double, Eigen::Dynamic, 8> magSerialRobot::m_get_actuation_matrix()
 {
     /* This function returns the actuation matrix Ma that relates the
      * applied augmented magnetic field vector beta = [b;g] (8x1) to the
@@ -162,7 +193,7 @@ Eigen::Matrix<double, Eigen::Dynamic, 8> magSerialRobot::actuationMatrix()
      * None
      *
      * Outputs:
-     * Eigen::Matrix<double,magSerialRobot::numLinks,8> Ma - nx8 actuation
+     * Eigen::Matrix<double,mNumLinks,8> Ma - nx8 actuation
      *                                                       matrix.
      * Details:
      * The instantaneous rate of work dW/dt of a wrench on a twist can be
@@ -205,24 +236,56 @@ Eigen::Matrix<double, Eigen::Dynamic, 8> magSerialRobot::actuationMatrix()
      *
      *      Q = Ma * beta
      */
-    Eigen::MatrixXd Ma(magSerialRobot::numLinks,8);
+    Eigen::MatrixXd Ma(mNumLinks,8);
     // Variable for storing the magnetic wrench matrix
     Eigen::Matrix<double,6,8> Mw = Eigen::Matrix<double,6,8>::Zero();
     // Variable for storing the unit twist of each joint
     Eigen::Matrix<double,6,1> unitTwist;
     // For each link...
-    for (int i=numLinks; i>0; i--)
+    for (int i=mNumLinks; i>0; i--)
     {
         // Determine the unit twist of the preceding joint. Joint i
         // is proximal to Link i.
-        unitTwist = magSerialRobot::unitTwistGlobal(i);
+        unitTwist = m_calc_unit_twist_global(i);
         // Change to coordinate-ray order from ray-coordinate order.
         unitTwist = robF::changeScrewOrder(unitTwist);
         // Calculate the magnetic wrench matrix. The wrench on Joint i
         // is the sum of all wrenches distal to i; hence the =+ operator.
-        Mw += magF::dipoleWrenchMatrix(magSerialRobot::magnet(i), magSerialRobot::magnetPos(i));
+        Mw += magF::dipoleWrenchMatrix(m_get_magnet(i), m_get_magnet_pos(i));
         // Calculate this row of the actuation matrix.
         Ma(i-1,Eigen::all) = unitTwist.transpose() * Mw;
     }
     return Ma;
+}
+
+void magSerialRobot::m_set_magnets(Eigen::Vector3d magnetLocal[],
+                                Eigen::Vector3d magnetPosLocal[])
+{
+    /*
+     * Change the position and dipole moment of magnets in the local link
+     * coordinates of the robot.
+     *
+     * Inputs:
+     * Eigen::Vector3d magnetLocal[]    - An array of 3x1 vectors
+     *                                    specifying the orientation and
+     *                                    magnitude of the onboard magnets
+     *                                    in each link in local (link)
+     *                                    coordinates.
+     * Eigen::Vector3d magnetPosLocal[] - An array of 3x1 vectors
+     *                                    specifying the position of the
+     *                                    onboard magnets in each link in
+     *                                    local (link) coordinates.
+     *
+     * Outputs:
+     * None.
+     *
+     * Details:
+     * This method sets the position and orientation of the magnets in the
+     * local link coordinates of the robot.
+     */
+    for (int i = 0; i<mNumLinks+1; i++)
+    {
+        mMagnetLocal[i] = magnetLocal[i];
+        mMagnetPosLocal[i] = magnetPosLocal[i];
+    }
 }
