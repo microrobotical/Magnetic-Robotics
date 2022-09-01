@@ -9,7 +9,7 @@ Useful function and class definitions for applications in magnetic robotics
 Several conventions are employed in this project. The choice of these conventions is often arbitrary and may not be obvious on initial use. The code contains comments documenting these conventions where they occur, but a brief summary is included here as well.
 
 ## Denavit-Hartenberg Convention
-The Denavit-Hartenberg (DH) convention is a standardized way of expressing the geometry of rigid-link robots. This code uses the standard (not modified) DH parameters: the *i*^th^ joint precedes (is proximal to) the *i*^th^ link, and the *z*-axis of the *(i-1)*^th^ frame is collinear with the rotational or translational axis of the *i*^th^ joint. The *i*^th^ frame is rigidly attached to the *i*^th^ link.
+The Denavit-Hartenberg (DH) convention is a standardized way of expressing the geometry of rigid-link robots. This code uses the standard (not modified) DH parameters: the *i*<sup>th</sup> joint precedes (is proximal to) the *i*<sup>th</sup> link, and the *z*-axis of the *(i-1)*<sup>th</sup> frame is collinear with the rotational or translational axis of the *i*<sup>th</sup> joint. The *i*<sup>th</sup> frame is rigidly attached to the *i*<sup>th</sup> link.
 `Link 0 (Base Link)` -> `Joint 1 (Frame 0)` -> `Link 1` -> `Joint 2 (Frame 1)` -> `Link 2` -> ... -> `Joint n (Frame n-1)` -> `Link n (End Effector)` -> `Frame n (EE frame)`
 
 ## Screws
@@ -17,10 +17,10 @@ The mathematical object called a "screw" is a useful concept in robotics because
 
 ## Augmented Magnetic Field
 The force and torque on a magnetic point dipole located at a point in space in a magnetic field is a function of the field vector and spatial gradient at that point in space. In most cases, physical constraints on the divergence and curl of the magnetic field result in only five of the nine spatial gradients being independent. As a result, we can define an augmented 8x1 magnetic field vector
-*beta* = [*b*; *g*],
-where *b* = [b<sub>x</sub>; b<sub>y</sub>; b<sub>z</sub>] is the 3x1 field vector at the point in space and *g* is a 5x1 vector containing selected spatial gradients of the magnetic field. By convention, this code uses the following spatial gradients in the following order:
-*g* = [g<sub>xx</sub>; g<sub>xy</sub>; g<sub>xz</sub>; g<sub>yy</sub>; g<sub>yz</sub>]
-where *g*<sub>xy</sub> denotes the partial derivative of b<sub>x</sub> with respect to y.
+**beta** = \[**b**; **g**\],
+where **b** = \[*b*<sub>*x*</sub>; *b*<sub>*y*</sub>; *b*<sub>*z*</sub>\] is the 3x1 field vector at the point in space and **g** is a 5x1 vector containing selected spatial gradients of the magnetic field. By convention, this code uses the following spatial gradients in the following order:
+**g** = \[*g*<sub>*xx*</sub>; *g*<sub>*xy*</sub>; *g*<sub>*xz*</sub>; *g*<sub>*yy*</sub>; *g*<sub>*yz*</sub>\]
+where *g*<sub>*xy*</sub> denotes the partial derivative of b<sub>x</sub> with respect to y.
 
 # Details
 
