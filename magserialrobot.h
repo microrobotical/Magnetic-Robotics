@@ -4,15 +4,15 @@
 #include "magfunctions.h"
 #include <iostream>
 
-class magSerialRobot : public robF::SerialRobot
+class MagSerialRobot : public robF::SerialRobot
 {
 public:
-    magSerialRobot(int numLinks);
-    magSerialRobot(int numLinks, double linkLength[], double linkTwist[],
+    MagSerialRobot(int numLinks);
+    MagSerialRobot(int numLinks, double linkLength[], double linkTwist[],
                    double linkOffset[], double jointAngle[], int jointType[],
                    Eigen::Vector3d magnetLocal[],
                    Eigen::Vector3d magnetPosLocal[]);
-    ~magSerialRobot();
+    ~MagSerialRobot();
     Eigen::Vector3d m_get_magnet(int linkNumber);
     Eigen::Vector3d m_get_magnet_pos(int linkNumber);
     Eigen::Matrix<double, Eigen::Dynamic, 8> m_get_actuation_matrix();
