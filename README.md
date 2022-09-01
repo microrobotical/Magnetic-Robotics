@@ -20,7 +20,7 @@ The force and torque on a magnetic point dipole located at a point in space in a
 **beta** = \[**b**; **g**\],
 where **b** = \[*b*<sub>*x*</sub>; *b*<sub>*y*</sub>; *b*<sub>*z*</sub>\] is the 3x1 field vector at the point in space and **g** is a 5x1 vector containing selected spatial gradients of the magnetic field. By convention, this code uses the following spatial gradients in the following order:
 **g** = \[*g*<sub>*xx*</sub>; *g*<sub>*xy*</sub>; *g*<sub>*xz*</sub>; *g*<sub>*yy*</sub>; *g*<sub>*yz*</sub>\]
-where *g*<sub>*xy*</sub> denotes the partial derivative of b<sub>x</sub> with respect to y.
+where *g*<sub>*xy*</sub> denotes the partial derivative of *b*<sub>*x*</sub> with respect to *y*.
 
 # Details
 
