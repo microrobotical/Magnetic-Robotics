@@ -19,6 +19,7 @@ MagSerialRobot::MagSerialRobot(int numLinks) : robF::SerialRobot(numLinks)
      */
     mMagnetLocal = new Eigen::Vector3d[numLinks+1];
     mMagnetPosLocal = new Eigen::Vector3d[numLinks+1];
+    mCoilMatrix = Eigen::Matrix<double,8,8>::Identity();
     for (int i = 0; i<numLinks+1; i++)
     {
         mMagnetLocal[i] << 0.0, 0.0, 0.0;
@@ -181,19 +182,19 @@ Eigen::Matrix<double,1,8> MagSerialRobot::m_actuation_vec(int jointNumber)
     return Mv;
 }
 
-Eigen::Matrix<double, Eigen::Dynamic, 8> MagSerialRobot::m_calc_actuation_matrix()
+Eigen::Matrix<double, Eigen::Dynamic, 8> MagSerialRobot::m_calc_magnetization_matrix()
 {
-    /* This function returns the actuation matrix Ma that relates the
+    /* This function returns the magnetization matrix Mb that relates the
      * applied augmented magnetic field vector beta = [b;g] (8x1) to the
      * generalized forces Q at the joints of the robot
-     *      Q = Ma * beta
+     *      Q = Mb * beta
      * with beta specified in global coordinates.
      *
      * Inputs:
      * None
      *
      * Outputs:
-     * Eigen::Matrix<double,mNumLinks,8> Ma - nx8 actuation
+     * Eigen::Matrix<double,mNumLinks,8> Mb - nx8 actuation
      *                                                       matrix.
      * Details:
      * The instantaneous rate of work dW/dt of a wrench on a twist can be
@@ -228,13 +229,13 @@ Eigen::Matrix<double, Eigen::Dynamic, 8> MagSerialRobot::m_calc_actuation_matrix
      * forces at the robot joints:
      *      Q_i = $_{t,i}' * A * sum_{j=i}^{n}(Mw_j) * beta
      *
-     *      Ma = [$_{t,1}' * A * sum_{j=1}^{n}(Mw_j)]
+     *      Mb = [$_{t,1}' * A * sum_{j=1}^{n}(Mw_j)]
      *           [$_{t,2}' * A * sum_{j=2}^{n}(Mw_j)]
      *                          :
      *                          :
      *           [$_{t,n}' * A * sum_{j=n}^{n}(Mw_j)]
      *
-     *      Q = Ma * beta
+     *      Q = Mb * beta
      */
     Eigen::MatrixXd Ma(mNumLinks,8);
     // Variable for storing the magnetic wrench matrix
@@ -282,7 +283,7 @@ Eigen::Matrix<double, Eigen::Dynamic, 1> MagSerialRobot::m_calc_applied_gen_forc
      * multiplying the augmented field vector by the robot actuation matrix.
      */
     Eigen::VectorXd Q(mNumLinks);
-    Q = m_calc_actuation_matrix()*augField;
+    Q = m_calc_magnetization_matrix()*augField;
     return Q;
 }
 
@@ -338,4 +339,35 @@ void MagSerialRobot::m_change_magnets(Eigen::Vector3d magnetLocal[],
         mMagnetLocal[i] = magnetLocal[i];
         mMagnetPosLocal[i] = magnetPosLocal[i];
     }
+}
+
+double MagSerialRobot::m_SSV(void)
+{
+    // Compute the singular value decomposition of the actuation matrix
+    mSVD.compute(m_calc_actuation_matrix());
+    // Extract the singular values and return the smallest
+    mSingularValues = mSVD.singularValues();
+    return mSingularValues(Eigen::last);
+}
+
+void MagSerialRobot::m_set_coil_matrix(Eigen::Matrix<double, 8, Eigen::Dynamic> coilMatrix)
+{
+    mCoilMatrix = coilMatrix;
+}
+
+Eigen::MatrixXd MagSerialRobot::m_calc_actuation_matrix()
+{
+    /* This function returns the actuation matrix Mu that relates the
+     * control inputs (coil currents) u (px1) to the generalized forces
+     * Q at the joints of the robot
+     *      Q = Mu * u
+     * with beta specified in global coordinates.
+     *
+     * Inputs:
+     * None
+     *
+     * Outputs:
+     * Eigen::Matrix<double,mNumLinks,8> Mu - nxp actuation matrix.
+     */
+    return m_calc_magnetization_matrix()*mCoilMatrix;
 }
