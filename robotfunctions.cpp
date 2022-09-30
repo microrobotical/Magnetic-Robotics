@@ -55,6 +55,7 @@ robF::SerialRobot::SerialRobot(int numLinks, double linkLength[], double linkTwi
     mLinkOffset = new double[numLinks];
     mJointAngle = new double[numLinks];
     mJointType = new int[numLinks];
+    mQRange = new double[2*numLinks];
     for (int i = 0; i<numLinks; i++)
     {
         mLinkLength[i] = linkLength[i];
@@ -62,6 +63,16 @@ robF::SerialRobot::SerialRobot(int numLinks, double linkLength[], double linkTwi
         mLinkOffset[i] = linkOffset[i];
         mJointAngle[i] = jointAngle[i];
         mJointType[i] = jointType[i];
+        if(mJointType[i] == jointPrs)
+        {
+            m_set_qRange(i, rangePrsDefault);
+            std::cout << "Link is PRS" << std::endl;
+        }
+        else
+        {
+            m_set_qRange(i, rangeRevDefault);
+            std::cout << "Link is REV" << std::endl;
+        }
     }
 }
 
@@ -85,13 +96,15 @@ robF::SerialRobot::SerialRobot(int numLinks)
     mLinkOffset = new double[numLinks];
     mJointAngle = new double[numLinks];
     mJointType = new int[numLinks];
+    mQRange = new double[2*numLinks];
     for (int i = 0; i<numLinks; i++)
     {
         mLinkLength[i] = 0.0;
         mLinkTwist[i] = 0.0;
         mLinkOffset[i] = 0.0;
         mJointAngle[i] = 0.0;
-        mJointType[i] = 0;
+        mJointType[i] = jointRev;
+        m_set_qRange(i, rangeRevDefault);
     }
 }
 
@@ -114,6 +127,7 @@ robF::SerialRobot::~SerialRobot()
     delete[] mLinkOffset;
     delete[] mJointAngle;
     delete[] mJointType;
+    delete[] mQRange;
 }
 
 void robF::SerialRobot::m_change_DH_params(double linkLength[], double linkTwist[], double linkOffset[], double jointAngle[], int jointType[])
@@ -180,11 +194,11 @@ Eigen::VectorXd robF::SerialRobot::m_get_q()
     {
         switch (mJointType[i])
         {
-        case JOINTREV:
+        case jointRev:
             // Revolute joint
             q(i) = mJointAngle[i];
             break;
-        case JOINTPRS:
+        case jointPrs:
             // Prismatic joint
             q(i) = mLinkOffset[i];
             break;
@@ -214,11 +228,11 @@ void robF::SerialRobot::m_set_q(Eigen::VectorXd q)
     {
         switch (mJointType[i])
         {
-        case JOINTREV:
+        case jointRev:
             // Revolute joint
             mJointAngle[i] = q(i);
             break;
-        case JOINTPRS:
+        case jointPrs:
             // Prismatic joint
             mLinkOffset[i] = q(i);
             break;
@@ -248,11 +262,11 @@ void robF::SerialRobot::m_set_q(int jointNumber, double q)
      */
     switch (mJointType[jointNumber-1])
     {
-    case JOINTREV:
+    case jointRev:
         // Revolute joint
         mJointAngle[jointNumber-1] = q;
         break;
-    case JOINTPRS:
+    case jointPrs:
         // Prismatic joint
         mLinkOffset[jointNumber-1] = q;
         break;
@@ -533,12 +547,12 @@ Eigen::Matrix<double,6,1> robF::SerialRobot::m_calc_unit_twist(int jointNumber)
     // Check the joint type
     switch (mJointType[frameNumber])
     {
-        case JOINTREV:
+        case jointRev:
             // The joint is revolute
             angularVelocity = TMat(Eigen::seq(0,2),2);
             position = TMat(Eigen::seq(0,2),3);
             break;
-        case JOINTPRS:
+        case jointPrs:
             // The joint is prismatic
             linearVelocity = TMat(Eigen::seq(0,2),2);
             break;
@@ -607,12 +621,12 @@ Eigen::Matrix<double,6,1> robF::SerialRobot::m_calc_unit_twist_global(int jointN
     // Check the joint type
     switch (mJointType[frameNumber])
     {
-        case JOINTREV:
+        case jointRev:
             // The joint is revolute
             angularVelocity = TMat(Eigen::seq(0,2),2);
             position = TMat(Eigen::seq(0,2),3);
             break;
-        case JOINTPRS:
+        case jointPrs:
             // The joint is prismatic
             linearVelocity = TMat(Eigen::seq(0,2),2);
             break;
@@ -661,3 +675,60 @@ double robF::SerialRobot::m_calc_gen_force_from_wrench(int jointNumber, Eigen::M
     return Q;
 }
 
+void robF::SerialRobot::m_set_qRange(Eigen::MatrixXd qRange)
+{
+    /* This function sets the allowable range of the joint values.
+     *
+     * Inputs:
+     * Eigen::MatrixXd qRange - The nx2 matrix of ranges [min,max]
+     */
+    for(int i=0; i < mNumLinks; i++)
+    {
+        // Set lower limit for this joint value
+        mQRange[2*i] = qRange(i,0); //rad
+        // Set upper limit for this joint value
+        mQRange[2*i+1] = qRange(i,1); //rad
+    }
+}
+
+void robF::SerialRobot::m_set_qRange(int jointNumber, Eigen::Vector2d qRange)
+{
+    /* This function sets the allowable range of the joint values.
+     *
+     * Inputs:
+     * int jointNumber - The jointNumber whose range is to be set.
+     * Eigen::MatrixXd qRange - The 2x1 vector of ranges [min,max]
+     */
+    // Set lower limit for this joint value
+    mQRange[2*jointNumber] = qRange(0); //rad or m
+    // Set upper limit for this joint value
+    mQRange[2*jointNumber+1] = qRange(1); //rad or m
+}
+
+void robF::SerialRobot::m_display_properties()
+{
+    std::cout << "-------------------------------------------------------------------------------" << std::endl;
+    std::cout << "*************************** Serial Robot Properties ***************************" << std::endl;
+    std::cout << "DH Parameters:" << std::endl;
+    for (int linkNum = 0; linkNum < mNumLinks; linkNum++)
+    {
+        std::cout << "Link " << linkNum+1 << std::endl;
+        std::cout << "a     = " << mLinkLength[linkNum] << " m" << std::endl;
+        std::cout << "alpha = " << mLinkTwist[linkNum] << " rad" << std::endl;
+        std::cout << "d     = " << mLinkOffset[linkNum] << " m";
+        if(mJointType[linkNum] == jointPrs)
+        {
+            std::cout << " <- q";
+        }
+        std::cout << std::endl;
+        std::cout << "theta = " << mJointAngle[linkNum] << " rad";
+        if(mJointType[linkNum] == jointRev)
+        {
+            std::cout << " <- q";
+        }
+        std::cout << std::endl;
+        std::cout << mQRange[2*linkNum] << " < q < " << mQRange[2*linkNum+1] << std::endl;
+        std::cout << "****************************************" << std::endl;
+    }
+    std::cout << "-------------------------------------------------------------------------------" << std::endl;
+}
