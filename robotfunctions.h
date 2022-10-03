@@ -32,6 +32,8 @@ public:
     void m_set_q(int jointNumber, double q);
     void m_set_qRange(Eigen::MatrixXd qRange);
     void m_set_qRange(int jointNumber, Eigen::Vector2d qRange);
+    double m_get_qMax(int jointNumber);
+    double m_get_qMin(int jointNumber);
     void m_set_Tbase(Eigen::Matrix4d T);
     void m_display_properties(void);
     Eigen::VectorXd m_get_q(void);

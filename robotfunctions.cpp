@@ -66,12 +66,10 @@ robF::SerialRobot::SerialRobot(int numLinks, double linkLength[], double linkTwi
         if(mJointType[i] == jointPrs)
         {
             m_set_qRange(i, rangePrsDefault);
-            std::cout << "Link is PRS" << std::endl;
         }
         else
         {
             m_set_qRange(i, rangeRevDefault);
-            std::cout << "Link is REV" << std::endl;
         }
     }
 }
@@ -731,4 +729,14 @@ void robF::SerialRobot::m_display_properties()
         std::cout << "****************************************" << std::endl;
     }
     std::cout << "-------------------------------------------------------------------------------" << std::endl;
+}
+
+double robF::SerialRobot::m_get_qMax(int jointNumber)
+{
+    return mQRange[2*(jointNumber-1)+1];
+}
+
+double robF::SerialRobot::m_get_qMin(int jointNumber)
+{
+    return mQRange[2*(jointNumber-1)];
 }
