@@ -371,3 +371,100 @@ Eigen::MatrixXd MagSerialRobot::m_calc_actuation_matrix()
      */
     return m_calc_magnetization_matrix()*mCoilMatrix;
 }
+
+double MagSerialRobot::m_calc_min_ssv(Eigen::VectorXd qRes)
+{
+    /* This function calculates the singular values of the robot
+     * over a grid of configurations and returns the minimum singular value
+     * over the robot workspace. It then sets the robot configuration to the
+     * configuration that results in the minimum singular value.
+     *
+     * Inputs:
+     * Eigen::VectorXd qRes - nx1 vector of desired grid resolution for each
+     *                        joint [rad]
+     *
+     * Outputs:
+     * double minSSV        - The minimum smallest singular value.
+     *
+     * Details:
+     *
+     */
+    double minSSV = 1e6;
+    double qMax;
+    double qMin;
+    int numPoints;
+    Eigen::VectorXd* qGridPoints = new Eigen::VectorXd[mNumLinks];
+    Eigen::VectorXd qMinSSV(mNumLinks);
+    // Create vectors containing the test grid values.
+    for (int jointNum = 1; jointNum <= mNumLinks; jointNum++)
+    {
+        qMax = m_get_qMax(jointNum);
+        qMin = m_get_qMin(jointNum);
+        numPoints = (int)ceil((qMax-qMin)/qRes(jointNum-1));
+        qGridPoints[jointNum-1] = Eigen::VectorXd::LinSpaced(numPoints, qMin, qMax);
+    }
+    // Begin recursive calculation of the ssv over all joint values.
+    m_calc_ssv(minSSV, qMinSSV, qGridPoints);
+    // Set the robot config to the config where the minimum SSV was found.
+    m_set_q(qMinSSV);
+    // Delete the dynamic array to avoid memory leak.
+    delete[] qGridPoints;
+    return minSSV;
+}
+
+void MagSerialRobot::m_calc_ssv(double& minSSV, Eigen::VectorXd& qMinSSV, Eigen::VectorXd qGridPoints[])
+{
+    m_calc_ssv(minSSV, qMinSSV, qGridPoints, 1);
+}
+
+void MagSerialRobot::m_calc_ssv(double& minSSV, Eigen::VectorXd& qMinSSV, Eigen::VectorXd qGridPoints[], int jointNum)
+{
+    /* This function uses recursion to calculate the smallest singular value of
+     * the robot actuation matrix (tau = Mu*u) at every point on the grid
+     * specified by the grid vectors in qGridPoints.
+     *
+     * Inputs:
+     * double &minSSV - The minimum smallest singular value, passed by reference.
+     * Eigen::VectorXd &qMinSSV - The configuration corresponding to the
+     *                            smallest singular value, passed by reference.
+     * Eigen::VectorXd *qGridPoints - An array of Eigen vector objects
+     *                                specifying the grid points. For example,
+     *                                qGridPoints[0] contains a vector object
+     *                                that specifies the grid values for joint
+     *                                1.
+     * int jointNum - The number of the joint currently being iterated over.
+     *                This variable is used to keep track of how far along the
+     *                robot we've moved in the recursion.
+     *
+     * Outputs:
+     * No return value. Instead, the function modifies the minSSV and qMinSSV
+     * variables, which were passed by reference.
+     */
+    double ssv;
+    // Iterate over the grid values for this joint.
+    for (double q : qGridPoints[jointNum-1])
+    {
+        // Update the robot state for this joint.
+        m_set_q(jointNum, q);
+        // If we have not reached the last joint in the robot...
+        if (jointNum < mNumLinks)
+        {
+            // ... then call self recursively to move to the next joint.
+            m_calc_ssv(minSSV, qMinSSV, qGridPoints, jointNum+1);
+        }
+        else
+        {
+            // Calculate the smallest singular value for the present state.
+            ssv = m_SSV();
+            // If the smallest singular value is less than the previous
+            // minimum smallest singular value...
+            if (ssv < minSSV)
+            {
+                // Update the minimum ssv.
+                minSSV = ssv;
+                // Update the state corresponding to the minimum ssv.
+                qMinSSV = m_get_q();
+            }
+        }
+    }
+}

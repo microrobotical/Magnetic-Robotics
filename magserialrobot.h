@@ -23,6 +23,7 @@ public:
                        Eigen::Vector3d magnetPosLocal[]);
     void m_set_coil_matrix(Eigen::Matrix<double, 8, Eigen::Dynamic>  coilMatrix);
     double m_SSV(void);
+    double m_calc_min_ssv(Eigen::VectorXd qRes);
 private:
     Eigen::Vector3d *mMagnetLocal;
     Eigen::Vector3d *mMagnetPosLocal;
@@ -30,6 +31,8 @@ private:
     Eigen::JacobiSVD<Eigen::MatrixXd> mSVD;
     Eigen::VectorXd mSingularValues;
     Eigen::Matrix<double, 8, Eigen::Dynamic> mCoilMatrix;
+    void m_calc_ssv(double& minSSV, Eigen::VectorXd& qMinSSV, Eigen::VectorXd qGridPoints[]);
+    void m_calc_ssv(double& minSSV, Eigen::VectorXd& qMinSSV, Eigen::VectorXd qGridPoints[], int jointNum);
 };
 
 #endif // MAGSERIALROBOT_H
