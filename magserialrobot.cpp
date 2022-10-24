@@ -302,11 +302,50 @@ Eigen::Matrix<double, Eigen::Dynamic, 1> MagSerialRobot::m_calc_internal_gen_for
      *                                            forces in N and N.m
      *
      * Details:
+     * The internal generalized force is the sum of wrenches from all
+     * magnets proximal to a given joint on all magents distal to a
+     * given joint. If i is the number of the generalized coordinate,
+     * about which we wish to find the generalized force, then
      *
+     * tau_{int,i} = twist_i * [DELTA] * sum_{j=i}^n (...
+     *                      ...sum_{k=0}^{i-1} wrench_{k,j})
+     *
+     * Where twist_i is the unit twist corresponding to the ith generalized
+     * coordinate, [DELTA] is the screw interchange matrix, and
+     * wrench_{k,j} is the magnetic wrench caused by the field produced
+     * by the magnet in link k on the magnet in link j.
      */
-    Eigen::VectorXd Q(mNumLinks);
+    Eigen::VectorXd tauInt = Eigen::VectorXd::Zero(mNumLinks);
+    Eigen::Matrix<double,6,1> wrench;
+    Eigen::Matrix<double,6,1> unitTwist;
+    // Magnetic dipole vector for the magnet in the jth link
+    Eigen::Vector3d mj;
+    // Global position vector for the magnet in the jth link
+    Eigen::Vector3d rj;
+    // Magnetic dipole vector for the magnet in the kth link
+    Eigen::Vector3d mk;
+    // Global position vector for the magnet in the kth link
+    Eigen::Vector3d rk;
     // Work in progress
-    return Q;
+    for (int linkNum = 1; linkNum <= mNumLinks; linkNum++)
+    {
+        unitTwist = robF::change_screw_order(m_calc_unit_twist_global(linkNum));
+        for (int j = linkNum; j <= mNumLinks; j++)
+        {
+            // Get the dipole vector and position of the jth magnet.
+            mj = m_get_magnet(j);
+            rj = m_get_magnet_pos(j);
+            for (int k = 0; k < linkNum; k++)
+            {
+                // Get the
+                mk = m_get_magnet(k);
+                rk = m_get_magnet_pos(k);
+                wrench = magF::calc_wrench_between_dipoles(mk, mj, rk, rj);
+                tauInt(linkNum-1) += unitTwist.transpose()*wrench;
+            }
+        }
+    }
+    return tauInt;
 }
 
 void MagSerialRobot::m_change_magnets(Eigen::Vector3d magnetLocal[],
