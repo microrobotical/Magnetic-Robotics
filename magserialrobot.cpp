@@ -412,6 +412,26 @@ double MagSerialRobot::m_calc_min_ssv(Eigen::VectorXd qRes)
     return minSSV;
 }
 
+double MagSerialRobot::m_calc_min_ssv()
+{
+    // Calculates the minimum ssv with default grid resolution
+    double qResPrs = 0.1e-3; //m
+    double qResRev = 1.0/180.0*M_PI; //rad
+    Eigen::VectorXd qRes(mNumLinks);
+    for (int jointNum = 1; jointNum <= mNumLinks; jointNum++)
+    {
+        if(mJointType[jointNum-1] == robF::jointPrs)
+        {
+            qRes(jointNum-1) = qResPrs;
+        }
+        else
+        {
+            qRes(jointNum-1) = qResRev;
+        }
+    }
+    return m_calc_min_ssv(qRes);
+}
+
 void MagSerialRobot::m_calc_ssv(double& minSSV, Eigen::VectorXd& qMinSSV, Eigen::VectorXd qGridPoints[])
 {
     m_calc_ssv(minSSV, qMinSSV, qGridPoints, 1);
@@ -466,5 +486,55 @@ void MagSerialRobot::m_calc_ssv(double& minSSV, Eigen::VectorXd& qMinSSV, Eigen:
                 qMinSSV = m_get_q();
             }
         }
+    }
+}
+
+void MagSerialRobot::m_optimize_dipole_vectors(void)
+{
+    // Levenberg-Marquardt optimization
+    // Based on: https://medium.com/@sarvagya.vaish/levenberg-marquardt-optimization-part-2-5a71f7db27a0
+    Eigen::VectorXf x(3*mNumLinks);
+    int paramNum;
+    float dipoleX;
+    float dipoleY;
+    float dipoleZ;
+    float dipoleH;
+    float dipoleMag;
+    float azimuthAngle;
+    float polarAngle;
+    LMfunctor dipoleFunctor(this);
+    dipoleFunctor.m = 1;
+    dipoleFunctor.n = 3*mNumLinks;
+    Eigen::LevenbergMarquardt<LMfunctor, float> lm(dipoleFunctor);
+    // Take the existing robot parameters as the initial conditions.
+    for (int linkNum = 1; linkNum <= mNumLinks; linkNum++)
+    {
+        dipoleX = float(mMagnetLocal[linkNum](0));
+        dipoleY = float(mMagnetLocal[linkNum](1));
+        dipoleZ = float(mMagnetLocal[linkNum](2));
+        dipoleMag = float(mMagnetLocal[linkNum].norm());
+        dipoleH = sqrt(dipoleX*dipoleX + dipoleY*dipoleY);
+        azimuthAngle = float(atan2(dipoleY, dipoleX));
+        polarAngle = float(atan2(dipoleZ, dipoleH));
+        paramNum = 3*(linkNum-1);
+        x(paramNum) = dipoleMag;
+        x(paramNum+1) = azimuthAngle;
+        x(paramNum+2) = polarAngle;
+    }
+    int status = lm.minimize(x);
+    std::cout << "LM Solver status: " << status << std::endl;
+    std::cout << "LM iterations: " << lm.iter << std::endl;
+    std::cout << "Final parameters: " << std::endl;
+    std::cout << x << std::endl << std::endl;
+    // Set the robot magnets to the optimized values.
+    for (int linkNum = 1; linkNum <= mNumLinks; linkNum++)
+    {
+        paramNum = 3*(linkNum-1);
+        dipoleMag = x(paramNum);
+        azimuthAngle = x(paramNum+1);
+        polarAngle = x(paramNum+2);
+        mMagnetLocal[linkNum] << dipoleMag*cos(azimuthAngle)*sin(polarAngle),
+                                dipoleMag*sin(azimuthAngle)*sin(polarAngle),
+                                dipoleMag*cos(polarAngle);
     }
 }
